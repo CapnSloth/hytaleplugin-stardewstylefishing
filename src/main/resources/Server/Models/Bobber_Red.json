@@ -1,0 +1,41 @@
+{
+  "Model": "NPC/Bobbers/Bobber_Basic.blockymodel",
+  "HitBox": {
+    "Max": {
+      "X": 0.15,
+      "Y": 0.15,
+      "Z": 0.15
+    },
+    "Min": {
+      "X": -0.15,
+      "Y": -0.15,
+      "Z": -0.15
+    }
+  },
+  "MinScale": 1,
+  "MaxScale": 1.5,
+  "Trails": [],
+  "Texture": "NPC/Bobbers/Bobber_Red/Bobber_Red.png",
+  "AnimationSets": {
+    "Idle": {
+      "Animations": [
+        {
+          "Animation": "Items/Animations/Spin_Pitch/Spin_Pitch_Down.blockyanim"
+        }
+      ]
+    }
+  },
+  "Icon": "Icons/ModelsGenerated/Bobber_Red.png",
+  "IconProperties": {
+    "Scale": 1.5,
+    "Rotation": [
+      0,
+      24,
+      0
+    ],
+    "Translation": [
+      0,
+      -8
+    ]
+  }
+}

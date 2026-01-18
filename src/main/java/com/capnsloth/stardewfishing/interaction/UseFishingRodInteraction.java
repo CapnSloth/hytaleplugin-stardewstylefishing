@@ -1,5 +1,6 @@
 package com.capnsloth.stardewfishing.interaction;
 
+import com.capnsloth.stardewfishing.component.FishingBobberComponent;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.*;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -17,6 +18,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.*;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
+import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jspecify.annotations.NonNull;
@@ -58,6 +61,13 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
             TransformComponent transform = store.getComponent(userRef, EntityModule.get().getTransformComponentType()); //Positioning component.
             holder.addComponent(TransformComponent.getComponentType(), transform); // (Type of component to add, actual component).
 
+            // Attach velocity and apply initial force based on user look direction.
+            holder.addComponent(PhysicsValues.getComponentType(), new PhysicsValues());
+            Vector3d userLook = store.getComponent(userRef, EntityModule.get().getHeadRotationComponentType()).getRotation().toVector3d();
+            //Velocity velocity = new Velocity(userLook.normalize().scale(3.0));
+            Velocity velocity = new Velocity(new Vector3d(1, 1, 1));
+            holder.addComponent(Velocity.getComponentType(), velocity);
+
             //Attach model and bounding box components.
             ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Bobber_Red");
             if(modelAsset == null) modelAsset = ModelAsset.DEBUG;
@@ -71,7 +81,10 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
 
             // Ensure critical components.
             holder.ensureComponent(UUIDComponent.getComponentType());
-            holder.ensureComponent(Interactable.getComponentType()); // if you want your entity to be interactable
+            holder.ensureComponent(FishingBobberComponent.getComponentType());
+
+            //Set up bobber variables.
+            holder.getComponent(FishingBobberComponent.getComponentType()).resetBobber();
 
             // Finally, spawn the entity by adding it to the world entity store.
             store.addEntity(holder, AddReason.SPAWN);
