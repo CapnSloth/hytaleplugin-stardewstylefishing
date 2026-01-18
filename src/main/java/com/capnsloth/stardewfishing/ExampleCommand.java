@@ -1,4 +1,4 @@
-package com.capnsloth.javaplugin;
+package com.capnsloth.stardewfishing;
 
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;

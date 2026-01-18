@@ -1,0 +1,44 @@
+package com.capnsloth.stardewfishing.util;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
+public class DefaultLootTableGenerator {
+    private static final Random RANDOM = new Random();
+
+    public static Map<String, Float> GENERIC(){
+        Map<String, Float> fishTable = new HashMap();
+        fishTable.put("Fish_Bluegill_Item", 5.0F);
+        fishTable.put("Fish_Catfish_Item", 5.0F);
+        fishTable.put("Fish_Minnow_Item", 5.0F);
+        fishTable.put("Fish_Tang_Blue_Item", 3.0F);
+        fishTable.put("Fish_Tang_Chevron_Item", 3.0F);
+        fishTable.put("Fish_Tang_Lemon_Peel_Item", 3.0F);
+        fishTable.put("Fish_Tang_Sailfin_Item", 3.0F);
+        fishTable.put("Fish_Clownfish_Item", 1.5F);
+        fishTable.put("Fish_Pufferfish_Item", 1.5F);
+        fishTable.put("Fish_Trout_Rainbow_Item", 1.5F);
+        fishTable.put("Fish_Salmon_Item", 1.5F);
+        fishTable.put("Fish_Jellyfish_Blue_Item", 0.75F);
+        fishTable.put("Fish_Jellyfish_Cyan_Item", 0.75F);
+        fishTable.put("Fish_Jellyfish_Green_Item", 0.75F);
+        fishTable.put("Fish_Jellyfish_Red_Item", 0.75F);
+        fishTable.put("Fish_Jellyfish_Yellow_Item", 0.75F);
+        fishTable.put("Fish_Jellyfish_Man_Of_War_Item", 0.25F);
+        fishTable.put("Fish_Crab_Item", 0.25F);
+        fishTable.put("Fish_Eel_Moray_Item", 0.25F);
+        fishTable.put("Fish_Frostgill_Item", 0.25F);
+        fishTable.put("Fish_Lobster_Item", 0.25F);
+        fishTable.put("Fish_Pike_Item", 0.25F);
+        fishTable.put("Fish_Piranha_Black_Item", 0.25F);
+        fishTable.put("Fish_Piranha_Item", 0.25F);
+        fishTable.put("Fish_Shark_Hammerhead_Item", 5.0F);
+        fishTable.put("Fish_Shellfish_Lava_Item", 0.25F);
+        fishTable.put("Fish_Snapjaw_Item", 0.25F);
+        fishTable.put("Fish_Trilobite_Black_Item", 0.25F);
+        fishTable.put("Fish_Trilobite_Item", 0.25F);
+        fishTable.put("Fish_Whale_Humpback_Item", 0.25F);
+        return fishTable;
+    }
+}
