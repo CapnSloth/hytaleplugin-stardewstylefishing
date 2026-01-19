@@ -43,8 +43,8 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Velocity bobberVelocity = store.getComponent(ref, Velocity.getComponentType());
 
         switch (bobber.stateTrigger){
-            case CAST: // Don't revert to NOTRIGGER here as this is used to prevent spam casting in Interaction.
-                break;
+            //case CAST: // Don't revert to NOTRIGGER here as this is used to prevent spam casting in Interaction.
+            //    break;
             case BITE:
                 bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
                 break;
@@ -56,6 +56,8 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                 bobber.nextFishMoveTime = new Random().nextFloat() * 3f;
                 bobber.fishMoveTimer = 0f;
                 bobber.fishVelocity = (bobber.fishMaxVeocity*-1f) + new Random().nextFloat() * (bobber.fishMaxVeocity - (bobber.fishMaxVeocity*-1f));
+                if(bobber.fishPos <= 5) bobber.fishVelocity = Math.abs(bobber.fishVelocity); // Always ensure that fish moves away from edges if near top / bottom.
+                if(bobber.fishPos >= 95) bobber.fishVelocity = Math.abs(bobber.fishVelocity) * -1f; //  ^
                 bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
                 break;
             case FAIL:
@@ -122,7 +124,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         }
 
         // Handle casting / reeling cooldown.
-        if(bobber.stateTrigger == FishingBobberComponent.Trigger.CAST && bobber.bobberAge >= bobber.castCooldown) bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
+        //if(bobber.stateTrigger == FishingBobberComponent.Trigger.CAST && bobber.bobberAge >= bobber.castCooldown) bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
         bobber.bobberAge += deltaTime;
     }
 

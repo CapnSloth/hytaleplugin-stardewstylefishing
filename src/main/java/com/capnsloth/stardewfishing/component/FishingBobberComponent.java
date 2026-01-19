@@ -25,7 +25,7 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public float hookAtTime = 10f; // Randomised time at which fish will be hooked.
     public SimplePhysicsProvider physicsProvider;
     public UUID ownerID;
-    public enum Trigger {NOTRIGGER,CAST, BITE, MINIGAME, FISHMOVE, SUCCESS, FAIL}
+    public enum Trigger {NOTRIGGER, BITE, MINIGAME, FISHMOVE, SUCCESS, FAIL}
     public Trigger stateTrigger = Trigger.NOTRIGGER;
     public UUID minigameFishModelId;
     public float bobberAge = 0f;

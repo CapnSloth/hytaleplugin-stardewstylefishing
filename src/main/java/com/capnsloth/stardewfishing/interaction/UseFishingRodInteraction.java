@@ -145,7 +145,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
 
             // Replace fishing rod with a copy containing bobber metadata and set it to cast mode.
             addBobberToItemMetadata(player.getInventory(), context.getHeldItemSlot(), holder.getComponent(UUIDComponent.getComponentType()).getUuid());
-            bobberComponent.stateTrigger = FishingBobberComponent.Trigger.CAST;
+            //bobberComponent.stateTrigger = FishingBobberComponent.Trigger.CAST;
 
             // Finally, queue up spawning of the entity by adding it to the world entity store.
             world.execute(() -> {store.addEntity(holder, AddReason.SPAWN); });
