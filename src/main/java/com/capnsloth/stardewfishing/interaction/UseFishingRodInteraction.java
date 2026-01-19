@@ -54,6 +54,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
     protected void firstRun(@NonNull InteractionType interactionType, @NonNull InteractionContext context, @NonNull CooldownHandler cooldownHandler) {
         LOGGER.atInfo().log("Used Rod");
 
+
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         if (commandBuffer == null) {
             context.getState().state = InteractionState.Failed;
@@ -77,59 +78,80 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
 
         // Check rod metadata for bobber.
         RodItemMetadata metadata = heldItem.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
-        if (metadata != null && metadata.bobberUUID != null) { // Bobber exists in the world, reel it.
-            LOGGER.atInfo().log("Reeling in");
-            world.execute(() -> {
-                removeAndDespawnBobber(player.getInventory(), context.getHeldItemSlot(), world);
-            });
+        if (metadata != null && metadata.bobberUUID != null) { // Bobber exists in the world, reel it in or do minigame logic depending on state.
+
+            Ref<EntityStore> bobberRef = world.getEntityRef(metadata.bobberUUID);
+            if(bobberRef == null) return;
+            FishingBobberComponent bobberComponent = store.getComponent(bobberRef, FishingBobberComponent.getComponentType());
+
+
+            // If in minigame then right click moves bar up, else reel in.
+            if(bobberComponent!=null && bobberComponent.isFishOn){
+                // Set cooldown to instant while in minigame.
+
+                //Move bar up.
+                LOGGER.atInfo().log("Moving fishing bar up");
+
+            }else { // Reel in and remove bobber.
+                LOGGER.atInfo().log("Reeling in");
+                world.execute(() -> {
+                    removeAndDespawnBobber(player.getInventory(), context.getHeldItemSlot(), world);
+                });
+            }
 
         } else {
+
             LOGGER.atInfo().log("Casting out");
             // Run bobber spawning code inside the world execution queue.
-            world.execute(() -> {
-                Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder(); // A "holder" is the entity which holds the components.
 
-                // Attach transform component.
-                TransformComponent transform = store.getComponent(userRef, EntityModule.get().getTransformComponentType()).clone(); //Positioning component.
-                transform.setPosition(transform.getPosition().add(new Vector3d(0, 1.5, 0)));
-                holder.addComponent(TransformComponent.getComponentType(), transform); // (Type of component to add, actual component).
-                Vector3d userLook = store.getComponent(userRef, EntityModule.get().getHeadRotationComponentType()).getDirection();
+            Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder(); // A "holder" is the entity which holds the components.
 
-                // Attach velocity and apply initial force based on user look direction.
-                holder.addComponent(PhysicsValues.getComponentType(), new PhysicsValues());
-                //Velocity velocity = new Velocity(userLook.normalize().scale(3.0));
-                Velocity velocity = new Velocity(userLook.scale(10));
-                holder.addComponent(Velocity.getComponentType(), velocity);
+            // Attach transform component.
+            TransformComponent transform = store.getComponent(userRef, EntityModule.get().getTransformComponentType()).clone(); //Positioning component.
+            transform.setPosition(transform.getPosition().add(new Vector3d(0, 1.5, 0)));
+            holder.addComponent(TransformComponent.getComponentType(), transform); // (Type of component to add, actual component).
+            Vector3d userLook = store.getComponent(userRef, EntityModule.get().getHeadRotationComponentType()).getDirection();
 
-                //Attach model and bounding box components.
-                ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Bobber_Red");
-                if (modelAsset == null) modelAsset = ModelAsset.DEBUG;
-                Model model = Model.createScaledModel(modelAsset, 1.0f);
-                holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
-                holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
-                holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
+            // Attach velocity and apply initial force based on user look direction.
+            holder.addComponent(PhysicsValues.getComponentType(), new PhysicsValues());
+            //Velocity velocity = new Velocity(userLook.normalize().scale(3.0));
+            Velocity velocity = new Velocity(userLook.scale(10));
+            holder.addComponent(Velocity.getComponentType(), velocity);
 
-                // Attach network component.
-                holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+            //Attach model and bounding box components.
+            ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Bobber_Red");
+            if (modelAsset == null) modelAsset = ModelAsset.DEBUG;
+            Model model = Model.createScaledModel(modelAsset, 1.0f);
+            holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
+            holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+            holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
 
-                // Ensure critical components.
-                holder.ensureComponent(UUIDComponent.getComponentType());
-                holder.ensureComponent(FishingBobberComponent.getComponentType());
+            // Attach network component.
+            holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
 
-                //Set up bobber variables.
-                FishingBobberComponent bobberComponent = holder.getComponent(FishingBobberComponent.getComponentType());
-                bobberComponent.resetBobber();
-                bobberComponent.ownerID = store.getComponent(userRef, UUIDComponent.getComponentType()).getUuid();
+            // Ensure critical components.
+            holder.ensureComponent(UUIDComponent.getComponentType());
+            holder.ensureComponent(FishingBobberComponent.getComponentType());
 
-                // Set and initialise physics.
-                SimplePhysicsProvider simplePhysicsProvider = new SimplePhysicsProvider(this::bounceHandler, this::impactHandler);
-                simplePhysicsProvider.initialize(Projectile.getAssetMap().getAsset("Projectile_Bobber"), holder.getComponent(BoundingBox.getComponentType()));
-                bobberComponent.physicsProvider = simplePhysicsProvider;
+            //Set up bobber variables.
+            FishingBobberComponent bobberComponent = holder.getComponent(FishingBobberComponent.getComponentType());
+            bobberComponent.resetBobber();
+            bobberComponent.ownerID = store.getComponent(userRef, UUIDComponent.getComponentType()).getUuid();
 
-                // Finally, spawn the entity by adding it to the world entity store.
-                store.addEntity(holder, AddReason.SPAWN);
-                addBobberToItemMetadata(player.getInventory(), context.getHeldItemSlot(), holder.getComponent(UUIDComponent.getComponentType()).getUuid());
-            });
+            // Set and initialise physics.
+            SimplePhysicsProvider simplePhysicsProvider = new SimplePhysicsProvider(this::bounceHandler, this::impactHandler);
+            simplePhysicsProvider.initialize(Projectile.getAssetMap().getAsset("Projectile_Bobber"), holder.getComponent(BoundingBox.getComponentType()));
+            bobberComponent.physicsProvider = simplePhysicsProvider;
+
+            // Replace fishing rod with a copy containing bobber metadata and set it to cast mode.
+            addBobberToItemMetadata(player.getInventory(), context.getHeldItemSlot(), holder.getComponent(UUIDComponent.getComponentType()).getUuid());
+            bobberComponent.stateTrigger = FishingBobberComponent.Trigger.CAST;
+
+            // Finally, queue up spawning of the entity by adding it to the world entity store.
+            world.execute(() -> {store.addEntity(holder, AddReason.SPAWN); });
+
+
+
         }
 
     }
@@ -144,9 +166,11 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
     protected void removeAndDespawnBobber(Inventory inventory, short hotbarSlot, World world){
         ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
         RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
-        UUID bobberUUID = metadata.bobberUUID;
-        // Despawn bobber.
-        world.getEntityStore().getStore().removeEntity(world.getEntityRef(bobberUUID), RemoveReason.REMOVE);
+        if(metadata != null) {
+            UUID bobberUUID = metadata.bobberUUID;
+            // Despawn bobber.
+            world.getEntityStore().getStore().removeEntity(world.getEntityRef(bobberUUID), RemoveReason.REMOVE);
+        }
 
         // Replace rod with new rod of empty metadata.
         ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEY, null); // Make metadata empty.

@@ -25,9 +25,10 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public float hookAtTime = 10f; // Randomised time at which fish will be hooked.
     public SimplePhysicsProvider physicsProvider;
     public UUID ownerID;
-    public enum Trigger {NOTRIGGER, BITE, MINIGAME, FISHMOVE, SUCCESS, FAIL}
+    public enum Trigger {NOTRIGGER,CAST, BITE, MINIGAME, FISHMOVE, SUCCESS, FAIL}
     public Trigger stateTrigger = Trigger.NOTRIGGER;
     public UUID minigameFishModelId;
+    public float bobberAge = 0f;
 
     // Config:
     public float maxHookTime = 10f; // The longest that it can take to hook a fish in seconds.
@@ -36,6 +37,7 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public float barRadius = 10f; // The size of half the bar, used to check if bar is over the fish.
     public float fishMaxVeocity = 5f; // The maximum speed of the fish.
     public double minigameModelVerticalOffset = 1f; // The height above bobber to display the minigame elements.
+    public float castCooldown = 1f; // Seconds before rod can be cast or reeled.
 
 
     public boolean checkSuccess(){
@@ -51,6 +53,7 @@ public class FishingBobberComponent implements Component<EntityStore> {
         fishPos = 0f;
         fishVelocity = 0f;
         fishMoveTimer = 0f;
+        bobberAge = 0f;
     }
 
     @Override
@@ -69,6 +72,8 @@ public class FishingBobberComponent implements Component<EntityStore> {
         clone.fishMaxVeocity = this.fishMaxVeocity;
         clone.minigameModelVerticalOffset = this.minigameModelVerticalOffset;
         clone.minigameFishModelId = this.minigameFishModelId;
+        clone.bobberAge = this.bobberAge;
+        clone.castCooldown = this.castCooldown;
         return clone;
     }
 

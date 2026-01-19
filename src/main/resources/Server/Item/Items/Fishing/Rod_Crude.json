@@ -39,7 +39,10 @@
         {
           "Type": "UseFishingRod"
         }
-      ]
+      ],
+      "Cooldown": {
+        "Cooldown": 0.1
+      }
     }
   },
   "Model": "Items/Tools/Hoe/Crude.blockymodel",

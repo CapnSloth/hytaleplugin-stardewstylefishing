@@ -6,12 +6,16 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -39,6 +43,8 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Velocity bobberVelocity = store.getComponent(ref, Velocity.getComponentType());
 
         switch (bobber.stateTrigger){
+            case CAST: // Don't revert to NOTRIGGER here as this is used to prevent spam casting in Interaction.
+                break;
             case BITE:
                 bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
                 break;
@@ -71,6 +77,8 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                 bobber.stateTrigger = FishingBobberComponent.Trigger.FISHMOVE;
                 LOGGER.atInfo().log("Fish changing velocity.");
             }
+
+
 
             // Apply fish movement.
             bobber.fishPos = Math.clamp(bobber.fishPos + bobber.fishVelocity, 0f, 100f);
@@ -113,27 +121,36 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
 
         }
 
-
-
+        // Handle casting / reeling cooldown.
+        if(bobber.stateTrigger == FishingBobberComponent.Trigger.CAST && bobber.bobberAge >= bobber.castCooldown) bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
+        bobber.bobberAge += deltaTime;
     }
 
     protected void spawnMinigameModels(FishingBobberComponent bobber, Ref<EntityStore> bobberRef, Store<EntityStore> store){
         Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
 
         UUID fishModelId = UUID.randomUUID();
+        LOGGER.atInfo().log("Fish Id: %s  |   Bobber Id: %s", fishModelId, store.getComponent(bobberRef, UUIDComponent.getComponentType()).getUuid());
         holder.addComponent(UUIDComponent.getComponentType(), new UUIDComponent(fishModelId));
         bobber.minigameFishModelId = fishModelId;
 
         // Assign transform to minigame and move it above the bobber.
         holder.addComponent(TransformComponent.getComponentType(), new TransformComponent());
-        holder.getComponent(TransformComponent.getComponentType()).setPosition(
-                store.getComponent(bobberRef, TransformComponent.getComponentType())
-                        .getPosition().add(new Vector3d(0,bobber.minigameModelVerticalOffset,0)));
+        Vector3d newPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
+        newPos = newPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset,0));
+        holder.getComponent(TransformComponent.getComponentType()).setPosition(newPos);
+        holder.getComponent(TransformComponent.getComponentType()).setRotation(new Vector3f(90, 0,0));
+
         // Add model.
-        ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Bobber_Red");
+        ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Clownfish");
         if (modelAsset == null) modelAsset = ModelAsset.DEBUG;
         Model model = Model.createScaledModel(modelAsset, 1.0f);
+        holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
         holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+        holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
+
+        // Attach network component.
+        holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
 
         // Spawn the model in the world.
         World world = store.getExternalData().getWorld();
@@ -148,13 +165,16 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Ref<EntityStore> fishModelRef = store.getExternalData().getWorld().getEntityRef(bobber.minigameFishModelId);
         if(fishModelRef == null) return;
 
-        Vector3d newPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition();
-        newPos = newPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.fishPos / 100f),0));
+        Vector3d newPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
+        newPos = newPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.fishPos / 50f),0));
 
 
         store.getComponent(fishModelRef, TransformComponent.getComponentType()).setPosition(newPos);
 
-        LOGGER.atInfo().log("Fish pos = %s", newPos);
+        //Vector3d p = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition();
+        //store.getComponent(bobberRef, TransformComponent.getComponentType()).setPosition(new Vector3d(p.x,115,p.z));
+
+        //LOGGER.atInfo().log("Fish pos = %s", store.getComponent(fishModelRef, TransformComponent.getComponentType()).getPosition());
     }
 
 }
