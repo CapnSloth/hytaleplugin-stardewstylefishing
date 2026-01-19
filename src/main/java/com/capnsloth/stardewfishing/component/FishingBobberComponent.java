@@ -6,10 +6,12 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
+import com.hypixel.hytale.server.core.modules.physics.SimplePhysicsProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jspecify.annotations.Nullable;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 public class FishingBobberComponent implements Component<EntityStore> {
     // Internal use:
@@ -18,6 +20,8 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public float wetLifetime = 0f; // The seconds for which the bobber has spent in the water.
     public float fightProgress = 25f; // The progress to successful catch. Success when progress is at 100.
     public float hookAtTime = 10f; // Randomised time at which fish will be hooked.
+    public SimplePhysicsProvider physicsProvider;
+    public UUID ownerID;
 
     // Config:
     public float maxHookTime = 10f; // The longest that it can take to hook a fish in seconds.
@@ -54,4 +58,5 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public static ComponentType<EntityStore, FishingBobberComponent> getComponentType() {
         return StardewStyleFishing.bobberComponent;
     }
+
 }

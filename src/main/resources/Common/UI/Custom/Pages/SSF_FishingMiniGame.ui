@@ -1,0 +1,12 @@
+Group{
+    Anchor: (Width: 300, Height: 800);
+    Background: #1a1a2e(0.9);
+    LayoutMode: Top;
+    Padding: (Full:10);
+
+    Label #Title {
+        Text: "Derp";
+        Anchor: (Height: 40);
+        Style: (FontSize: 24, TextColor: #ffffff, Alignment: Center);
+    }
+}

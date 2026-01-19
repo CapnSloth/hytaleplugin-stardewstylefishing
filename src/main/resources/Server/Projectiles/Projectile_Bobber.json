@@ -1,0 +1,19 @@
+{
+  "Appearance": "Bobber_Red",
+  "Radius": 0.2,
+  "Height": 0.2,
+  "VerticalCenterShot": 0.2,
+  "HorizontalCenterShot": 0.2,
+  "DepthShot": 0,
+  "PitchAdjustShot": false,
+  "SticksVertically": false,
+  "MuzzleVelocity": 15,
+  "TerminalVelocity": 13,
+  "Gravity": 7,
+  "Damage": 1,
+  "DeathEffectsOnHit": false,
+  "DeadTime": 0,
+  "DeadTimeMiss": 0,
+  "TimeToLive": 1000,
+  "RotationMode": "Velocity"
+}
