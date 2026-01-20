@@ -1,6 +1,7 @@
 package com.capnsloth.stardewfishing.system;
 
 import com.capnsloth.stardewfishing.component.FishingBobberComponent;
+import com.capnsloth.stardewfishing.interaction.RodItemMetadata;
 import com.capnsloth.stardewfishing.interaction.UseFishingRodInteraction;
 import com.capnsloth.stardewfishing.util.HelperTransforms;
 import com.hypixel.hytale.component.*;
@@ -44,6 +45,41 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         FishingBobberComponent bobber = store.getComponent(ref, FishingBobberComponent.getComponentType());
         Velocity bobberVelocity = store.getComponent(ref, Velocity.getComponentType());
 
+        // Check if fishing rod is no longer active item and remove bobber if so.
+        Ref<EntityStore> playerRef = store.getExternalData().getRefFromUUID(bobber.ownerID);
+        if(playerRef != null){
+            Player player = store.getComponent(playerRef, Player.getComponentType());
+            if(player != null) {
+                Inventory inventory = player.getInventory();
+                // Check if active hotbar slot changed.
+                if(inventory.getActiveHotbarSlot() != bobber.rodItemStackSlot){
+                    UseFishingRodInteraction.reelRod(player, store.getExternalData().getWorld(), bobber);
+                    LOGGER.atInfo().log("Active hotbar slot changed.");
+                // Check if rod is no longer in active slot.
+                }else{
+                    ItemStack heldItem = inventory.getActiveHotbarItem();
+                    if(heldItem != null) {
+                        RodItemMetadata metadata = heldItem.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
+                        if(metadata != null) {
+                            if (!metadata.bobberUUID.toString().equals(bobber.selfUUID.toString())){
+
+                                UseFishingRodInteraction.reelRod(player, store.getExternalData().getWorld(), bobber);
+                                LOGGER.atInfo().log("Item in hotbar slot changed. %s,  %s", metadata.bobberUUID, bobber.selfUUID);
+                            }
+                        }
+                    }else{
+                        UseFishingRodInteraction.reelRod(player, store.getExternalData().getWorld(), bobber);
+                        LOGGER.atInfo().log("No item in hotbar slot.");
+                    }
+                }
+            }
+        }else{
+            // Rod user is missing, remove bobber and minigame.
+            UseFishingRodInteraction.removeAndDespawnBobber(bobber, store.getExternalData().getWorld());
+        }
+
+
+
         switch (bobber.stateTrigger){
             //case CAST: // Don't revert to NOTRIGGER here as this is used to prevent spam casting in Interaction.
             //    break;
@@ -65,12 +101,12 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
             case FAIL:
                 LOGGER.atInfo().log("YOU FAIL");
                 // Reel in the rod which the bobber owner is using.
-                UseFishingRodInteraction.reelRod(store.getComponent(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), Player.getComponentType()), store.getExternalData().getWorld());
+                UseFishingRodInteraction.reelRod(store.getComponent(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), Player.getComponentType()), store.getExternalData().getWorld(), bobber);
                 break;
             case SUCCESS:
                 LOGGER.atInfo().log("YOU WIN");
                 // Reel in the rod which the bobber owner is using.
-                UseFishingRodInteraction.reelRod(store.getComponent(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), Player.getComponentType()), store.getExternalData().getWorld());
+                UseFishingRodInteraction.reelRod(store.getComponent(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), Player.getComponentType()), store.getExternalData().getWorld(), bobber);
                 break;
         }
 

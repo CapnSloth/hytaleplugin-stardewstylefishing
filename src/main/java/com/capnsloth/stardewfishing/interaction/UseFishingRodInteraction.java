@@ -30,6 +30,7 @@ import org.jspecify.annotations.NonNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public class UseFishingRodInteraction extends SimpleInstantInteraction {
     public static final BuilderCodec<UseFishingRodInteraction> CODEC;
@@ -65,14 +66,14 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
             return;
         }
 
-        // Get the player using the item.
+        // Get the player using the context.
         Ref<EntityStore> userRef = context.getEntity();
         Player player = commandBuffer.getComponent(userRef, Player.getComponentType());
 
         // Check rod metadata for bobber.
         RodItemMetadata metadata = heldItem.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
         if(metadata == null) {
-            metadata = updateLastInteractionTimeMetadata(player.getInventory(), context.getHeldItemSlot());
+            metadata = updateLastInteractionTimeMetadata(player.getInventory(), context.getHeldItemSlot(), world);
         }
 
         // Set up references to the bobber.
@@ -89,6 +90,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
             bobberRef = world.getEntityRef(metadata.bobberUUID);
             bobberComponent = store.getComponent(bobberRef, FishingBobberComponent.getComponentType());
 
+
             // If in minigame then right click moves bar up, else reel in.
             if (bobberComponent.isFishOn) {
 
@@ -97,7 +99,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
 
                 //TimeUnit.SECONDS.convert(System.nanoTime() - metadata.lastCastOrReelTime, TimeUnit.NANOSECONDS) >= 0.2f
             } else if (metadata.castState == 1 && metadata.canCast(ROD_CAST_COOLDOWN)) { // Reel in and remove bobber.
-                reelRod(player, world);
+                reelRod(player, world, bobberComponent);
             }
 
         }
@@ -113,14 +115,15 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
     }
 
 
-    public static void reelRod(Player player, World world){
+    public static void reelRod(Player player, World world, FishingBobberComponent bobber){
         LOGGER.atInfo().log("Reeling in");
 
-        removeAndDespawnBobber(player.getInventory(), player.getInventory().getActiveHotbarSlot(), world);
+        removeAndDespawnBobber(bobber, world);
 
         // Store the current time as the lastInteractionTime on the rod.
-        updateLastInteractionTimeMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot());
-        setCastState(0, player.getInventory(), player.getInventory().getActiveHotbarSlot());
+        //updateLastInteractionTimeMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot(), world);
+        updateLastInteractionTimeMetadata(player.getInventory(), bobber.rodItemStackSlot, world);
+        setCastState(0, player.getInventory(), bobber.rodItemStackSlot, world);
     }
 
     public static void castRod(Store<EntityStore> store, Player player, World world){
@@ -128,6 +131,10 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         // Run bobber spawning code inside the world execution queue.
         Ref<EntityStore> userRef = player.getReference();
         Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder(); // A "holder" is the entity which holds the components.
+
+        // Attach UUID and network component.
+        holder.addComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
+        holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
 
         // Attach transform component.
         TransformComponent transform = store.getComponent(userRef, EntityModule.get().getTransformComponentType()).clone(); //Positioning component.
@@ -149,8 +156,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
         holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
 
-        // Attach network component.
-        holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+
 
 
         //Set up bobber variables.
@@ -158,6 +164,8 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         FishingBobberComponent bobberComponent = holder.getComponent(FishingBobberComponent.getComponentType());
         bobberComponent.resetBobber();
         bobberComponent.ownerID = store.getComponent(userRef, UUIDComponent.getComponentType()).getUuid();
+        bobberComponent.selfUUID = holder.getComponent(UUIDComponent.getComponentType()).getUuid();
+        bobberComponent.rodItemStackSlot = player.getInventory().getActiveHotbarSlot();
         bobberComponent.rodItemStack = player.getInventory().getActiveHotbarItem();
 
         // Set and initialise physics.
@@ -170,12 +178,12 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         holder.ensureComponent(FishingBobberComponent.getComponentType());
 
         // Replace fishing rod with a copy containing bobber metadata and set it to cast mode.
-        addBobberToItemMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot(), holder.getComponent(UUIDComponent.getComponentType()).getUuid());
+        addBobberToItemMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot(), holder.getComponent(UUIDComponent.getComponentType()).getUuid(), world);
         //bobberComponent.stateTrigger = FishingBobberComponent.Trigger.CAST;
 
         // Add cast metadata to rod.
-        updateLastInteractionTimeMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot());
-        setCastState(1, player.getInventory(), player.getInventory().getActiveHotbarSlot());
+        updateLastInteractionTimeMetadata(player.getInventory(), player.getInventory().getActiveHotbarSlot(), world);
+        setCastState(1, player.getInventory(), player.getInventory().getActiveHotbarSlot(), world);
 
         // Finally, queue up spawning of the entity by adding it to the world entity store.
         world.execute(() -> {
@@ -184,7 +192,7 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
 
     }
 
-    protected static void addBobberToItemMetadata(Inventory inventory, short hotbarSlot, UUID bobberUUID){
+    protected static void addBobberToItemMetadata(Inventory inventory, short hotbarSlot, UUID bobberUUID, World world){
         // Get existing rod and its metadata.
         ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
         RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
@@ -194,28 +202,44 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         metadata.bobberUUID = bobberUUID;
 
         // Replace rod.
+        replaceRod(inventory, hotbarSlot, world, oldRod, metadata);
+    }
+
+    private static void replaceRod(Inventory inventory, short hotbarSlot, World world, ItemStack oldRod, RodItemMetadata metadata) {
         ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEYED_CODEC, metadata);
+        /*
+        Ref<EntityStore> bobberRef = world.getEntityRef(metadata.bobberUUID);
+        if(bobberRef != null){
+            FishingBobberComponent bobber = world.getEntityStore().getStore().getComponent(bobberRef, FishingBobberComponent.getComponentType());
+            if(bobber != null){
+                bobber.rodItemStack = newRod;
+            }
+        }
+
+         */
         inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
     }
-    protected static RodItemMetadata updateLastInteractionTimeMetadata(Inventory inventory, short hotbarSlot){
+
+    protected static RodItemMetadata updateLastInteractionTimeMetadata(Inventory inventory, short hotbarSlot, World world){
         // Get existing rod and its metadata.
         ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
+        if(oldRod == null) return null;
         RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
         if(metadata == null) metadata = new RodItemMetadata();
 
         // Modify metadata.
         metadata.lastCastOrReelTime = System.nanoTime();
 
-        // Replace rod.
-        ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEYED_CODEC, metadata);
-        inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
+        // Replace rod. (adjust bobber reference to rod, so it can keep track of it)
+        replaceRod(inventory, hotbarSlot, world, oldRod, metadata);
 
         return metadata;
     }
 
-    protected static RodItemMetadata toggleCastState(Inventory inventory, short hotbarSlot){
+    protected static RodItemMetadata toggleCastState(Inventory inventory, short hotbarSlot, World world){
         // Get existing rod and its metadata.
         ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
+        if(oldRod == null) return null;
         RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
         if(metadata == null) metadata = new RodItemMetadata();
 
@@ -224,15 +248,15 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         else if(metadata.castState == 1){ metadata.castState = 0;}
 
         // Replace rod.
-        ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEYED_CODEC, metadata);
-        inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
+        replaceRod(inventory, hotbarSlot, world, oldRod, metadata);
 
         return metadata;
     }
 
-    protected static RodItemMetadata setCastState(int state, Inventory inventory, short hotbarSlot){
+    protected static RodItemMetadata setCastState(int state, Inventory inventory, short hotbarSlot, World world){
         // Get existing rod and its metadata.
         ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
+        if(oldRod == null) return null;
         RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
         if(metadata == null) metadata = new RodItemMetadata();
 
@@ -240,53 +264,52 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
         metadata.castState = state;
 
         // Replace rod.
-        ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEYED_CODEC, metadata);
-        inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
+        replaceRod(inventory, hotbarSlot, world, oldRod, metadata);
 
         return metadata;
     }
 
-    protected static void removeAndDespawnBobber(Inventory inventory, short hotbarSlot, World world){
-        ItemStack oldRod = inventory.getHotbar().getItemStack(hotbarSlot);
-        RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
+    public static void removeAndDespawnBobber(FishingBobberComponent bobber, World world){
+        //ItemStack oldRod = inventory.getHotbar().getItemStack(bobber.rodItemStackSlot);
+        //RodItemMetadata metadata = oldRod.getFromMetadataOrNull(RodItemMetadata.KEY, RodItemMetadata.CODEC);
         Store<EntityStore> store = world.getEntityStore().getStore();
-        if(metadata != null) {
-            Ref<EntityStore> bobberRef = world.getEntityRef(metadata.bobberUUID);
-            if(bobberRef == null) return; // If bobber doesn't exist, then nothing to do.
-            FishingBobberComponent bobber = store.getComponent(bobberRef, FishingBobberComponent.getComponentType());
 
-            // Attempt to despawn additional models.
-            if(bobber != null) {
-                if(bobber.minigameFishModelId != null) {
-                    Ref<EntityStore> fishModelRef = world.getEntityRef(bobber.minigameFishModelId);
-                    if (fishModelRef != null) {
-                        world.execute(() -> {
-                            store.removeEntity(fishModelRef, RemoveReason.REMOVE);
-                        });
-                    }
-                }
+        Ref<EntityStore> bobberRef = world.getEntityRef(bobber.selfUUID);
+        if(bobberRef == null) return; // If bobber doesn't exist, then nothing to do.
 
-                if(bobber.minigameBarModelId != null) {
-                    Ref<EntityStore> barModelRef = world.getEntityRef(bobber.minigameBarModelId);
-                    if (barModelRef != null) {
-                        world.execute(() -> {
-                            store.removeEntity(barModelRef, RemoveReason.REMOVE);
-                        });
-                    }
+        // Attempt to despawn additional models.
+        if(bobber != null) {
+            if(bobber.minigameFishModelId != null) {
+                Ref<EntityStore> fishModelRef = world.getEntityRef(bobber.minigameFishModelId);
+                if (fishModelRef != null) {
+                    world.execute(() -> {
+                        store.removeEntity(fishModelRef, RemoveReason.REMOVE);
+                    });
                 }
             }
 
-            // Despawn bobber.
-            world.execute(() -> {
-                store.removeEntity(bobberRef, RemoveReason.REMOVE);
-            });
-
-
+            if(bobber.minigameBarModelId != null) {
+                Ref<EntityStore> barModelRef = world.getEntityRef(bobber.minigameBarModelId);
+                if (barModelRef != null) {
+                    world.execute(() -> {
+                        store.removeEntity(barModelRef, RemoveReason.REMOVE);
+                    });
+                }
+            }
         }
 
+        // Despawn bobber.
+        world.execute(() -> {
+            store.removeEntity(bobberRef, RemoveReason.REMOVE);
+        });
+
+
+
+
         // Replace rod with new rod of empty metadata.
-        ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEY, null); // Make metadata empty.
-        inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
+        //ItemStack newRod = oldRod.withMetadata(RodItemMetadata.KEY, null); // Make metadata empty.
+        //inventory.getHotbar().replaceItemStackInSlot(hotbarSlot, oldRod, newRod);
+        //LOGGER.atInfo().log(oldRod.toPacket().metadata);
     }
 
 

@@ -26,7 +26,9 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public float hookAtTime = 10f; // Randomised time at which fish will be hooked.
     public SimplePhysicsProvider physicsProvider;
     public UUID ownerID;
-    public ItemStack rodItemStack = null;
+    public UUID selfUUID;
+    public byte rodItemStackSlot; // The inventory slot in which the bobber rod exists.
+    public ItemStack rodItemStack; // Both these rod item vars are used to ensure player doesn't move it or their active hotbar slot.
     public enum Trigger {NOTRIGGER, BITE, MINIGAME, FISHMOVE, SUCCESS, FAIL}
     public Trigger stateTrigger = Trigger.NOTRIGGER;
     public UUID minigameFishModelId;
@@ -88,7 +90,7 @@ public class FishingBobberComponent implements Component<EntityStore> {
         clone.barGravity = this.barGravity;
         clone.barSpeed = this.barSpeed;
         clone.lastInteractionTime = this.lastInteractionTime;
-        clone.rodItemStack = this.rodItemStack;
+        clone.rodItemStackSlot = this.rodItemStackSlot;
         return clone;
     }
 

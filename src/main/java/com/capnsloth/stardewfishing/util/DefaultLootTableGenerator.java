@@ -41,4 +41,24 @@ public class DefaultLootTableGenerator {
         fishTable.put("Fish_Whale_Humpback_Item", 0.25F);
         return fishTable;
     }
+
+    public static String getRandomFish(Map<String, Float> lootTable) {
+        if (lootTable.isEmpty()) return "";
+
+        float totalWeight = 0.0F;
+        for (Float w : lootTable.values()) {
+            totalWeight += w;
+        }
+
+        float r = RANDOM.nextFloat() * totalWeight;
+        for (Map.Entry<String, Float> entry : lootTable.entrySet()) {
+            r -= entry.getValue();
+            if (r <= 0.0F) {
+                return entry.getKey();
+            }
+        }
+
+        // Fallback (shouldn't normally reach here due to floating point)
+        return lootTable.keySet().stream().findFirst().orElse(null);
+    }
 }
