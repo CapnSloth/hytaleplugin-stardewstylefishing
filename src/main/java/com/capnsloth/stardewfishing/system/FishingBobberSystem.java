@@ -3,6 +3,7 @@ package com.capnsloth.stardewfishing.system;
 import com.capnsloth.stardewfishing.component.FishingBobberComponent;
 import com.capnsloth.stardewfishing.interaction.RodItemMetadata;
 import com.capnsloth.stardewfishing.interaction.UseFishingRodInteraction;
+import com.capnsloth.stardewfishing.util.DefaultLootTableGenerator;
 import com.capnsloth.stardewfishing.util.HelperTransforms;
 import com.hypixel.hytale.component.*;
 import com.hypixel.hytale.component.query.Query;
@@ -13,6 +14,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
@@ -25,6 +27,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.awt.*;
 import java.util.Random;
 import java.util.UUID;
 
@@ -105,6 +108,11 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                 break;
             case SUCCESS:
                 LOGGER.atInfo().log("YOU WIN");
+                // Spawn fish rewards!
+                ItemStack fishStack = DefaultLootTableGenerator.createRandomFish(DefaultLootTableGenerator.GENERIC());
+                if (!fishStack.isEmpty()) {
+                    ItemUtils.throwItem(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), fishStack, 4.0F, commandBuffer);
+                }
                 // Reel in the rod which the bobber owner is using.
                 UseFishingRodInteraction.reelRod(store.getComponent(store.getExternalData().getWorld().getEntityRef(bobber.ownerID), Player.getComponentType()), store.getExternalData().getWorld(), bobber);
                 break;
@@ -237,9 +245,9 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         HelperTransforms.applyBillboard(barModelEntityId, bobber.ownerID, new Vector3f(90,0,0), store);
 
         // Add model.
-        ModelAsset barModelAsset = ModelAsset.getAssetMap().getAsset("Salmon");
+        ModelAsset barModelAsset = ModelAsset.getAssetMap().getAsset("SSF_FishingBar");
         if (barModelAsset == null) barModelAsset = ModelAsset.DEBUG;
-        Model barModel = Model.createScaledModel(barModelAsset, 1.0f);
+        Model barModel = Model.createScaledModel(barModelAsset, 10.0f);
         barModelEntity.addComponent(PersistentModel.getComponentType(), new PersistentModel(barModel.toReference()));
         barModelEntity.addComponent(ModelComponent.getComponentType(), new ModelComponent(barModel));
         barModelEntity.addComponent(BoundingBox.getComponentType(), new BoundingBox(barModel.getBoundingBox()));

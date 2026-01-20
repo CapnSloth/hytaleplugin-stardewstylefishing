@@ -1,5 +1,8 @@
 package com.capnsloth.stardewfishing.util;
 
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.npc.util.InventoryHelper;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -60,5 +63,18 @@ public class DefaultLootTableGenerator {
 
         // Fallback (shouldn't normally reach here due to floating point)
         return lootTable.keySet().stream().findFirst().orElse(null);
+    }
+
+    public static ItemStack createRandomFish(Map<String, Float> lootTable) {
+        String fishId = getRandomFish(lootTable);
+        ItemStack fishStack = ItemStack.EMPTY;
+        if (fishId.isEmpty()) {
+            return fishStack;
+        }
+        fishStack = InventoryHelper.createItem(fishId);
+        if (fishStack == null) {
+            return ItemStack.EMPTY;
+        }
+        return fishStack;
     }
 }
