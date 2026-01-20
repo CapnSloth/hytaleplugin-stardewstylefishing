@@ -1,0 +1,18 @@
+{
+  "Model": "NPC/Bobbers/SSF_FishingBar.blockymodel",
+  "HitBox": {
+    "Max": {
+      "X": 1,
+      "Y": 1,
+      "Z": 1
+    },
+    "Min": {
+      "X": 0,
+      "Y": 0,
+      "Z": 0
+    }
+  },
+  "MinScale": 0.1,
+  "MaxScale": 10,
+  "EyeHeight": 0
+}

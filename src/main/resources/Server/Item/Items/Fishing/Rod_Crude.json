@@ -41,7 +41,8 @@
         }
       ],
       "Cooldown": {
-        "Cooldown": 0.1
+        "Cooldown": 0,
+        "Id": "use_cooldown"
       }
     }
   },
