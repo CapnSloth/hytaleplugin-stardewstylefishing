@@ -1,5 +1,5 @@
 {
-  "Model": "VFX/Fishing/SSF_FishingBar.blockymodel",
+  "Model": "VFX/Fishing/SSF_FishIcon.blockymodel",
   "HitBox": {
     "Max": {
       "X": 1,
@@ -14,5 +14,5 @@
   },
   "MinScale": 0.1,
   "MaxScale": 1,
-  "Texture": "VFX/Fishing/SSF_FishingBar.png"
+  "Texture": "VFX/Fishing/SSF_FishIcon.png"
 }

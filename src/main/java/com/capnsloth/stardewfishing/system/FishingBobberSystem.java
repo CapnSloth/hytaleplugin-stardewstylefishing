@@ -12,6 +12,9 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.Animation;
+import com.hypixel.hytale.protocol.FormattedMessage;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
@@ -125,16 +128,25 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
             // Do minigame logic.
 
             // Check if bar is over the fish and check win state.
-            float distance = Math.abs(bobber.fishPos - bobber.barPos);
-            if(distance <= bobber.barRadius){
+            //float distance = Math.abs(bobber.fishPos - bobber.barPos);
+            //if(distance <= bobber.barRadius){
+            if(bobber.fishPos < bobber.barPos + bobber.barRadius && bobber.fishPos > bobber.barPos - bobber.barRadius){
                 bobber.fightProgress += bobber.fishReelRate * deltaTime;
-                if(bobber.fightProgress >= 100){
+                // DEBUG
+                Message message = new Message(new FormattedMessage());
+                message.insert("Yes");
+                store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
+                if(bobber.fightProgress >= 1.0f){
                     bobber.stateTrigger = FishingBobberComponent.Trigger.SUCCESS;
                     return;
                 }
             }else{
                 bobber.fightProgress -= bobber.fishEscapeRate * deltaTime;
-                if(bobber.fightProgress <= 0){
+                // DEBUG
+                Message message = new Message(new FormattedMessage());
+                message.insert("Nope");
+                store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
+                if(bobber.fightProgress <= 0f){
                     bobber.stateTrigger = FishingBobberComponent.Trigger.FAIL;
                     return;
                 }
@@ -152,6 +164,9 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
 
             // Apply fish movement.
             bobber.fishPos = Math.clamp(bobber.fishPos + (bobber.fishVelocity*deltaTime), 0f, 100f);
+            //DEBUG
+            bobber.fishPos = 0.5f;
+
             //LOGGER.atInfo().log("Fish pos = %s", bobber.fishPos);
             updateMinigameModelPositions(bobber, ref, store);
             bobber.fishMoveTimer += deltaTime;
@@ -213,9 +228,9 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         HelperTransforms.applyBillboard(fishModelId, bobber.ownerID, new Vector3f(90,0,0), store);
 
         // Add model.
-        ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Clownfish");
+        ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("SSF_FishIcon");
         if (modelAsset == null) modelAsset = ModelAsset.DEBUG;
-        Model model = Model.createScaledModel(modelAsset, 1.0f);
+        Model model = Model.createScaledModel(modelAsset, 0.5f * bobber.minigameScale);
         fishModelEntity.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
         fishModelEntity.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
         fishModelEntity.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
@@ -240,17 +255,22 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         // Assign transform to minigame and move it above the bobber.
         barModelEntity.addComponent(TransformComponent.getComponentType(), new TransformComponent());
         Vector3d newBarPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
-        newBarPos = newBarPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset,0));
+        //newBarPos = newBarPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset,0));
+        Vector3d playerPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone();
+        newBarPos = newBarPos.add(HelperTransforms.moveAwayFrom(newBarPos ,playerPos, 2));
         barModelEntity.getComponent(TransformComponent.getComponentType()).setPosition(newBarPos);
-        HelperTransforms.applyBillboard(barModelEntityId, bobber.ownerID, new Vector3f(90,0,0), store);
+        //HelperTransforms.applyBillboard(barModelEntityId, bobber.ownerID, new Vector3f(90,0,0), store);
+
 
         // Add model.
         ModelAsset barModelAsset = ModelAsset.getAssetMap().getAsset("SSF_FishingBar");
         if (barModelAsset == null) barModelAsset = ModelAsset.DEBUG;
-        Model barModel = Model.createScaledModel(barModelAsset, 10.0f);
+        Model barModel = Model.createScaledModel(barModelAsset, (bobber.barRadius * 2f) * bobber.minigameScale);
         barModelEntity.addComponent(PersistentModel.getComponentType(), new PersistentModel(barModel.toReference()));
         barModelEntity.addComponent(ModelComponent.getComponentType(), new ModelComponent(barModel));
         barModelEntity.addComponent(BoundingBox.getComponentType(), new BoundingBox(barModel.getBoundingBox()));
+
+
 
         // Attach network component.
         barModelEntity.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
@@ -282,13 +302,15 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
          */
 
         // Adjust fish height based on minigame fishPos.
-        newFishPos = newFishPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.fishPos / 50f),0));
+        newFishPos = newFishPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.fishPos * bobber.minigameScale),0));
 
 
 
         store.getComponent(fishModelRef, TransformComponent.getComponentType()).setPosition(newFishPos);
         // Do Fish rotation.
-        HelperTransforms.applyBillboard(bobber.minigameFishModelId, bobber.ownerID, new Vector3f(90,0,0), store);
+        float camOffset =  store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), ModelComponent.getComponentType()).getModel().getEyeHeight();
+        Vector3d playerHeadPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone().add(new Vector3d(0, camOffset,0));
+        HelperTransforms.applyBillboardYOnly(bobber.minigameFishModelId, newFishPos, playerHeadPos ,new Vector3f(90,0,0), store);
 
 
         // Do bar logic.
@@ -297,11 +319,22 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
 
         // Do bar model motion.
         Vector3d newBarPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
-        newBarPos = newBarPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.barPos / 50f),0));
-        store.getComponent(barModelRef, TransformComponent.getComponentType()).setPosition(newBarPos);
-        // Do bar rotation.
-        //HelperTransforms.applyBillboard(bobber.minigameBarModelId, bobber.ownerID, new Vector3f(90,0,0), store);
+        newBarPos = newBarPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset + (bobber.barPos * bobber.minigameScale) ,0));
+        Vector3d playerPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone();
+        //newBarPos = newBarPos.add(HelperTransforms.moveAwayFrom(newBarPos ,playerPos, 0.2));
 
+        Vector3d layering = newBarPos.clone().add(HelperTransforms.moveAwayFrom(newBarPos.clone() ,playerPos, 0.2));
+        newBarPos = new Vector3d(layering.x, newBarPos.y, layering.z);
+
+
+        store.getComponent(barModelRef, TransformComponent.getComponentType()).setPosition(newBarPos);
+
+
+
+        // Do bar rotation.
+        HelperTransforms.applyBillboardYOnly(bobber.minigameBarModelId, newBarPos, playerHeadPos, new Vector3f(0,0,0), store);
+
+        //LOGGER.atInfo().log("CamOffset: %s,   PlayerHeadPos: %s",camOffset, playerHeadPos);
         //LOGGER.atInfo().log("GameBarPos = %s,  WorldBarPos = %s", bobber.barPos ,newBarPos);
 
     }

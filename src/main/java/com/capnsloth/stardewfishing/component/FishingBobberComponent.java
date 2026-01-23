@@ -17,8 +17,8 @@ public class FishingBobberComponent implements Component<EntityStore> {
     public boolean isFishOn = false;
     public boolean isInWater = false;
     public float wetLifetime = 0f; // The seconds for which the bobber has spent in the water.
-    public float fightProgress = 25f; // The progress to successful catch. Success when progress is at 100.
-    public float fishPos = 0f; // The position of the fish in the bar.
+    public float fightProgress = 0.25f; // The progress to successful catch. Success when progress is at 1f.
+    public float fishPos = 0f; // The position of the fish in the bar as a scale from 0 - 1.
     public float barPos = 0f; // The position of the catch bar.
     public float nextFishMoveTime = 0.5f; // The time until the next fish movement.
     public float fishMoveTimer = 0f; // Counts up until next fish move.
@@ -39,26 +39,27 @@ public class FishingBobberComponent implements Component<EntityStore> {
 
 
     // Config:
-    public float maxHookTime = 10f; // The longest that it can take to hook a fish in seconds.
-    public float fishEscapeRate = 10f; // The progress lost per-second that the fish is not in the catch bar.
-    public float fishReelRate = 10f; // The progress gain per second when the fish is inside catch bar.
-    public float barRadius = 20f; // The size of half the bar, used to check if bar is over the fish.
-    public float fishMaxVeocity = 40f; // The maximum speed of the fish.
+    public float maxHookTime = 2f; // The longest that it can take to hook a fish in seconds.
+    public float fishEscapeRate = 0f; // The progress lost per-second that the fish is not in the catch bar.
+    public float fishReelRate = 0f; // The progress gain per second when the fish is inside catch bar.
+    public float barRadius = 0.13f; // The size of half the bar, used to check if bar is over the fish.
+    public float fishMaxVeocity = 0.4f; // The maximum speed of the fish.
     public double minigameModelVerticalOffset = 1f; // The height above bobber to display the minigame elements.
-    public float castCooldown = 1f; // Seconds before rod can be cast or reeled.
-    public float barGravity = 45f; // How fast the bar falls when not being risen. Should be close to fish max velocity.
-    public float barSpeed = 45f; // How fast the bar rises when right click is held. Should be faster than fish max velocity.
+    public float minigameScale = 2;
+    public float castCooldown = 0.5f; // Seconds before rod can be cast or reeled.
+    public float barGravity = 0.1f; // How fast the bar falls when not being risen. Should be close to fish max velocity.
+    public float barSpeed = 0.1f; // How fast the bar rises when right click is held. Should be faster than fish max velocity.
 
 
-    public boolean checkSuccess(){
-        return fightProgress >= 100f;
-    }
+    //public boolean checkSuccess(){
+    //    return fightProgress >= 100f;
+    //}
 
     public void resetBobber(){
         isFishOn = false;
         isInWater = false;
         wetLifetime = 0f;
-        fightProgress = 25f;
+        fightProgress = 0.25f;
         hookAtTime = new Random().nextFloat() * maxHookTime;
         stateTrigger = Trigger.NOTRIGGER;
         fishPos = 0f;
