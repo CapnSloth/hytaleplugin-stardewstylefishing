@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "server.items.Tool_Hoe_Crude.name",
-    "Description": "server.items.Tool_Hoe.description"
+    "Name": "Crude Rod",
+    "Description": "[W.I.P] Use to catch fish in any water."
   },
   "Categories": [
     "Items.Tools"
@@ -12,15 +12,15 @@
   "MaxStack": 1,
   "ItemLevel": 1,
   "Recipe": {
-    "TimeSeconds": 1.5,
+    "TimeSeconds": 1.0,
     "Input": [
       {
         "ResourceTypeId": "Wood_Trunk",
         "Quantity": 2
       },
       {
-        "ResourceTypeId": "Rock",
-        "Quantity": 1
+        "Quantity": 2,
+        "ItemId": "Ingredient_Bolt_Wool"
       }
     ],
     "BenchRequirement": [
@@ -30,6 +30,12 @@
           "Farming"
         ],
         "Id": "Farmingbench"
+      },
+      {
+        "Id": "Workbench",
+        "Categories": [
+          "Workbench_Tools"
+        ]
       }
     ]
   },

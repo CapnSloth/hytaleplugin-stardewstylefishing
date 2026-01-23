@@ -133,9 +133,9 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
             if(bobber.fishPos < bobber.barPos + bobber.barRadius && bobber.fishPos > bobber.barPos - bobber.barRadius){
                 bobber.fightProgress += bobber.fishReelRate * deltaTime;
                 // DEBUG
-                Message message = new Message(new FormattedMessage());
-                message.insert("Yes");
-                store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
+                //Message message = new Message(new FormattedMessage());
+                //message.insert("Yes");
+                //store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
                 if(bobber.fightProgress >= 1.0f){
                     bobber.stateTrigger = FishingBobberComponent.Trigger.SUCCESS;
                     return;
@@ -143,9 +143,9 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
             }else{
                 bobber.fightProgress -= bobber.fishEscapeRate * deltaTime;
                 // DEBUG
-                Message message = new Message(new FormattedMessage());
-                message.insert("Nope");
-                store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
+                //Message message = new Message(new FormattedMessage());
+                //message.insert("Nope");
+                //store.getComponent(playerRef, Player.getComponentType()).sendMessage(message);
                 if(bobber.fightProgress <= 0f){
                     bobber.stateTrigger = FishingBobberComponent.Trigger.FAIL;
                     return;
@@ -160,12 +160,12 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
             }
 
             // Apply bar motion. (Rising is computed in UseFishingRodInteraction)
-            bobber.barPos = Math.clamp(bobber.barPos - (bobber.barGravity * deltaTime),0f,100f);
+            bobber.barPos = Math.clamp(bobber.barPos - (bobber.barGravity * deltaTime),0f,1.0f);
 
             // Apply fish movement.
-            bobber.fishPos = Math.clamp(bobber.fishPos + (bobber.fishVelocity*deltaTime), 0f, 100f);
+            bobber.fishPos = Math.clamp(bobber.fishPos + (bobber.fishVelocity*deltaTime), 0f, 1.0f);
             //DEBUG
-            bobber.fishPos = 0.5f;
+            //bobber.fishPos = 0.5f;
 
             //LOGGER.atInfo().log("Fish pos = %s", bobber.fishPos);
             updateMinigameModelPositions(bobber, ref, store);
@@ -235,7 +235,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         fishModelEntity.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
         fishModelEntity.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
 
-        // Attach network component..
+        // Attach network component.
         fishModelEntity.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
 
         // Spawn the model in the world.
