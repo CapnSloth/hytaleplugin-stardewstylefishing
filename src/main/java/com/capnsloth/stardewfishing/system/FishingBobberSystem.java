@@ -235,7 +235,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         fishModelEntity.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
         fishModelEntity.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
 
-        // Attach network component.
+        // Attach network component..
         fishModelEntity.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
 
         // Spawn the model in the world.
