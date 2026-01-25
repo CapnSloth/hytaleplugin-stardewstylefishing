@@ -4,7 +4,7 @@ import com.capnsloth.stardewfishing.component.FishingBobberComponent;
 import com.capnsloth.stardewfishing.interaction.RodItemMetadata;
 import com.capnsloth.stardewfishing.interaction.UseFishingRodInteraction;
 import com.capnsloth.stardewfishing.util.DefaultLootTableGenerator;
-import com.capnsloth.stardewfishing.util.HelperTransforms;
+import com.capnsloth.stardewfishing.util.TransformHelpers;
 import com.hypixel.hytale.component.*;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
@@ -12,9 +12,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.Animation;
-import com.hypixel.hytale.protocol.FormattedMessage;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
@@ -30,7 +27,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.awt.*;
 import java.util.Random;
 import java.util.UUID;
 
@@ -93,6 +89,11 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                 bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
                 break;
             case MINIGAME:
+                Vector3d bobberPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.selfUUID), TransformComponent.getComponentType()).getPosition().clone();
+                Vector3d playerPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone();
+                double distanceFromPlayer = bobberPos.distanceTo(playerPos);
+                bobber.minigameScale = Math.clamp((float)distanceFromPlayer * bobber.minigameScaleMultiplier, bobber.minigameScaleMin, bobber.minigameScaleMax);
+                LOGGER.atInfo().log("minigame scale: %s", bobber.minigameScale);
                 spawnMinigameModels(bobber, ref, store);
                 bobber.stateTrigger = FishingBobberComponent.Trigger.NOTRIGGER;
                 break;
@@ -151,7 +152,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                     return;
                 }
             }
-            LOGGER.atInfo().log("fight progress: %s", bobber.fightProgress);
+            //LOGGER.atInfo().log("fight progress: %s", bobber.fightProgress);
 
             // Check if fish will change velocity or direction.
             if(bobber.fishMoveTimer >= bobber.nextFishMoveTime){
@@ -159,8 +160,10 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                 //LOGGER.atInfo().log("Fish changing velocity.");
             }
 
-            // Apply bar motion. (Rising is computed in UseFishingRodInteraction)
-            bobber.barPos = Math.clamp(bobber.barPos - (bobber.barGravity * deltaTime),0f,1.0f);
+            // Apply bar motion. (Rising is computed in UseFishingRodInteraction by changing barVelocity)
+            bobber.barVelocity = Math.clamp(bobber.barVelocity - (bobber.barGravity*bobber.barAcceleration), -bobber.barGravity, bobber.barSpeed);
+            //bobber.barPos = Math.clamp(bobber.barPos - (bobber.barGravity * deltaTime),0f,1.0f);
+            bobber.barPos = Math.clamp(bobber.barPos + (bobber.barVelocity * deltaTime), 0f, 1.0f);
 
             // Apply fish movement.
             bobber.fishPos = Math.clamp(bobber.fishPos + (bobber.fishVelocity*deltaTime), 0f, 1.0f);
@@ -178,15 +181,44 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
                     bobber.stateTrigger = FishingBobberComponent.Trigger.MINIGAME;
                 }
 
+
+
+                TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+
+                if((bobberVelocity.getX() + bobberVelocity.getZ() + bobberVelocity.getY())/3 > 0.001) {
+                    // Slow down bobber.
+                    bobberVelocity.set(bobberVelocity.getX() * bobber.waterFriction, bobberVelocity.getY() * bobber.waterFriction , bobberVelocity.getZ() * bobber.waterFriction);
+
+                    if(TransformHelpers.isInFluid(bobber.selfUUID, store.getExternalData().getWorld())){
+                        bobber.physicsProvider.addVelocity(0,0.5f,0);
+                    }else{
+                        Vector3d wp = transform.getPosition().clone();
+                        //transform.getPosition().add(TransformHelpers.moveTowards(wp, new Vector3d(wp.x, Math.round(wp.y) - 0.2, wp.z), 1 * deltaTime));
+                    }
+
+
+                    bobber.physicsProvider.tick(
+                            deltaTime,
+                            bobberVelocity,
+                            store.getExternalData().getWorld(),
+                            transform,
+                            ref,
+                            store
+                    );
+                }
+
+                //transform.getRotation().add(TransformHelpers.moveTowards(transform.getRotation().clone(), new Vector3f(90f, 0f, 0f), 1f));
+                transform.setRotation(new Vector3f(0,0,0));
+
                 // Run down bobber timer.
                 bobber.wetLifetime += deltaTime;
             }else{
                 // Do casting logic.
                 // Check if current occupied space is a water block.
                 Vector3i bobberPos = store.getComponent(ref, TransformComponent.getComponentType()).getPosition().toVector3i();
-                int occupiedBlockId = store.getExternalData().getWorld().getFluidId(bobberPos.x, bobberPos.y, bobberPos.z);
-                if(occupiedBlockId != 0){ // Is any fluid.
+                if(TransformHelpers.isInFluid(bobberPos, store.getExternalData().getWorld())){ // Is any fluid.
                     bobber.isInWater = true;
+
                 }
                 //LOGGER.atInfo().log("Bobber in %s at pos %s", BlockType.getAssetMap().getAsset(occupiedBlockId).getGroup(), bobberPos.toString());
                 //LOGGER.atInfo().log("BlockId %s  =  %s",occupiedBlockId, BlockType.getAssetMap().getAsset(occupiedBlockId).getId());
@@ -225,7 +257,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Vector3d newPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
         newPos = newPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset,0));
         fishModelEntity.getComponent(TransformComponent.getComponentType()).setPosition(newPos);
-        HelperTransforms.applyBillboard(fishModelId, bobber.ownerID, new Vector3f(90,0,0), store);
+        TransformHelpers.applyBillboard(fishModelId, bobber.ownerID, new Vector3f(90,0,0), store);
 
         // Add model.
         ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("SSF_FishIcon");
@@ -257,7 +289,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Vector3d newBarPos = store.getComponent(bobberRef, TransformComponent.getComponentType()).getPosition().clone();
         //newBarPos = newBarPos.add(new Vector3d(0,bobber.minigameModelVerticalOffset,0));
         Vector3d playerPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone();
-        newBarPos = newBarPos.add(HelperTransforms.moveAwayFrom(newBarPos ,playerPos, 2));
+        newBarPos = newBarPos.add(TransformHelpers.moveAwayFrom(newBarPos ,playerPos, 2));
         barModelEntity.getComponent(TransformComponent.getComponentType()).setPosition(newBarPos);
         //HelperTransforms.applyBillboard(barModelEntityId, bobber.ownerID, new Vector3f(90,0,0), store);
 
@@ -310,7 +342,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         // Do Fish rotation.
         float camOffset =  store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), ModelComponent.getComponentType()).getModel().getEyeHeight();
         Vector3d playerHeadPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone().add(new Vector3d(0, camOffset,0));
-        HelperTransforms.applyBillboardYOnly(bobber.minigameFishModelId, newFishPos, playerHeadPos ,new Vector3f(90,0,0), store);
+        TransformHelpers.applyBillboardYOnly(bobber.minigameFishModelId, newFishPos, playerHeadPos ,new Vector3f(90,0,0), store);
 
 
         // Do bar logic.
@@ -323,7 +355,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
         Vector3d playerPos = store.getComponent(store.getExternalData().getRefFromUUID(bobber.ownerID), TransformComponent.getComponentType()).getPosition().clone();
         //newBarPos = newBarPos.add(HelperTransforms.moveAwayFrom(newBarPos ,playerPos, 0.2));
 
-        Vector3d layering = newBarPos.clone().add(HelperTransforms.moveAwayFrom(newBarPos.clone() ,playerPos, 0.2));
+        Vector3d layering = newBarPos.clone().add(TransformHelpers.moveAwayFrom(newBarPos.clone() ,playerPos, 0.2));
         newBarPos = new Vector3d(layering.x, newBarPos.y, layering.z);
 
 
@@ -332,7 +364,7 @@ public class FishingBobberSystem extends EntityTickingSystem<EntityStore> {
 
 
         // Do bar rotation.
-        HelperTransforms.applyBillboardYOnly(bobber.minigameBarModelId, newBarPos, playerHeadPos, new Vector3f(0,0,0), store);
+        TransformHelpers.applyBillboardYOnly(bobber.minigameBarModelId, newBarPos, playerHeadPos, new Vector3f(0,0,0), store);
 
         //LOGGER.atInfo().log("CamOffset: %s,   PlayerHeadPos: %s",camOffset, playerHeadPos);
         //LOGGER.atInfo().log("GameBarPos = %s,  WorldBarPos = %s", bobber.barPos ,newBarPos);

@@ -5,14 +5,17 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
+import java.util.Vector;
 
 /// A helper class for position and rotation calculations.
-public class HelperTransforms {
+public class TransformHelpers {
     private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
     public static void applyBillboard(UUID looker, UUID lookAtTarget, Vector3f finalRotationAdjustment, Store<EntityStore> store){
@@ -86,11 +89,43 @@ public class HelperTransforms {
     }
 
     public static Vector3d moveTowards(Vector3d startPos, Vector3d targetPos, double amount){
+        if(amount > startPos.distanceTo(targetPos)) return targetPos; // Prevent overshooting.
         Vector3d direction = Vector3d.directionTo(startPos, targetPos);
         return direction.scale(amount);
+    }
+
+    public static Vector3f moveTowards(Vector3f startPos, Vector3f targetPos, float amount){
+        if(amount > startPos.distanceTo(targetPos)) return targetPos; // Prevent overshooting.
+        Vector3f direction = Vector3f.directionTo(startPos, targetPos);
+        return direction.scale(amount);
+    }
+
+    public static double moveTowards(double startPos, double targetPos, double amount){
+        double vector = targetPos - startPos;
+        double direction = Math.signum(vector);
+        double result = direction * amount;
+        if(Math.abs(result) > Math.abs(targetPos)) result = targetPos;
+        return result;
     }
 
     public static Vector3d moveAwayFrom(Vector3d startPos, Vector3d targetPos, double amount){
         return moveTowards(startPos, targetPos, amount).scale(-1);
     }
+
+    public static boolean isInFluid(UUID entityId, World world){
+        Ref<EntityStore> ref = world.getEntityRef(entityId);
+        if(ref == null) return false;
+        Store<EntityStore> store = world.getEntityStore().getStore();
+        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+        if(transform == null) return false;
+        Vector3i pos = transform.getPosition().clone().toVector3i();
+        return isInFluid(pos, world);
+    }
+
+    public static boolean isInFluid(Vector3i pos, World world){
+        int occupiedBlockId = world.getFluidId(pos.x, pos.y, pos.z);
+        // Is any fluid.
+        return occupiedBlockId != 0;
+    }
+
 }

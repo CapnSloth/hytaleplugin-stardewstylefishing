@@ -95,7 +95,8 @@ public class UseFishingRodInteraction extends SimpleInstantInteraction {
             if (bobberComponent.isFishOn) {
 
                 //Move bar up.
-                bobberComponent.barPos = Math.clamp(bobberComponent.barPos + ((bobberComponent.barSpeed + bobberComponent.barGravity) * bobberComponent.approxBobberSystemDeltaTime), 0f, 1.0f);
+                bobberComponent.barVelocity = Math.clamp(bobberComponent.barVelocity + (bobberComponent.barSpeed * bobberComponent.barAcceleration) + (bobberComponent.barGravity*bobberComponent.barAcceleration), bobberComponent.barGravity, bobberComponent.barSpeed);
+
 
                 //TimeUnit.SECONDS.convert(System.nanoTime() - metadata.lastCastOrReelTime, TimeUnit.NANOSECONDS) >= 0.2f
             } else if (metadata.castState == 1 && metadata.canCast(ROD_CAST_COOLDOWN)) { // Reel in and remove bobber.

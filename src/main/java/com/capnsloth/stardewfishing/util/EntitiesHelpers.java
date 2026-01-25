@@ -1,5 +1,5 @@
 package com.capnsloth.stardewfishing.util;
 
-public class HelperEntities {
+public class EntitiesHelpers {
 
 }

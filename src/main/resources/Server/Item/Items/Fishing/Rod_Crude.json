@@ -8,7 +8,7 @@
   ],
   "Set": "Tool_Stone",
   "Icon": "Icons/ItemsGenerated/Rod_Crude.png",
-  "Quality": "Developer",
+  "Quality": "Uncommon",
   "MaxStack": 1,
   "ItemLevel": 1,
   "Recipe": {
@@ -52,20 +52,20 @@
       }
     }
   },
-  "Model": "Items/Tools/Hoe/Crude.blockymodel",
-  "Texture": "Items/Tools/Hoe/Crude_Texture.png",
+  "Model": "Items/FishingRods/Rod_Crude.blockymodel",
+  "Texture": "Items/FishingRods/Rod_Crude.png",
   "MaxDurability": 100,
   "PlayerAnimationsId": "Hoe",
   "IconProperties": {
-    "Scale": 0.45,
+    "Scale": 0.6,
     "Rotation": [
-      232,
-      300,
-      0
+      36,
+      268,
+      28
     ],
     "Translation": [
-      -27,
-      15
+      21,
+      -30
     ]
   },
   "DroppedItemAnimation": "Items/Animations/Dropped/Dropped_Diagonal_Left.blockyanim",
